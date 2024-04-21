@@ -1,21 +1,40 @@
+import json
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 import subprocess
 import os
 
-# Замени 'your_bot_token_here' на токен, который ты получил от BotFather
-TOKEN = 'your_bot_token_here'
+def read_token():
+    # Чтение токена из файла
+    with open('/home/seva_romanovsky/bot/Deploy_Bot/API.txt', 'r') as file:
+        token = file.read().strip()
+    return token
+
+def read_allowed_users():
+    # Чтение списка разрешенных пользователей из JSON файла
+    with open('/home/seva_romanovsky/bot/Deploy_Bot/allowed_users.json', 'r') as file:
+        data = json.load(file)
+    return set(data['allowed_users'])
+
+TOKEN = read_token()
+ALLOWED_USER_IDS = read_allowed_users()
 
 async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ALLOWED_USER_IDS:
+        await update.message.reply_text("У вас нет доступа к этой команде.")
+        return
+
     # Получаем ссылку на GitHub репозиторий
     if len(context.args) != 1:
         await update.message.reply_text('Пожалуйста, предоставьте ссылку на репозиторий GitHub.')
         return
     
     github_link = context.args[0]
-    
+
     # Команды для выполнения
     commands = [
+        "source env/bin/activate",
         f"git clone {github_link}",
         "echo your_service_configuration > your_service.service",
         "sudo mv your_service.service /etc/systemd/system/",
@@ -23,15 +42,11 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "sudo systemctl start your_service",
         "sudo systemctl status your_service"
     ]
-    
-    try:
-        # Активация виртуального окружения
-        process = subprocess.Popen("source env/bin/activate", shell=True, executable="/bin/bash")
-        process.wait()
 
+    try:
         # Переходим в директорию для клонирования проекта
         os.chdir('./bot')
-        
+
         # Выполняем команды
         for cmd in commands:
             process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -43,7 +58,7 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Отправляем результаты выполнения
             await update.message.reply_text(f'Результат выполнения {cmd}: {stdout.decode()}')
-    
+
     except Exception as e:
         await update.message.reply_text(f'Произошла ошибка: {str(e)}')
 
@@ -52,7 +67,7 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    deploy_handler = CommandHandler('deploy', deploy, pass_args=True)
+    deploy_handler = CommandHandler('deploy', deploy)
     app.add_handler(deploy_handler)
 
     app.run_polling()
