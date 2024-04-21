@@ -34,9 +34,8 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Команды для выполнения
     commands = [
-        "source env/bin/activate",
         f"git clone {github_link}",
-        "echo your_service_configuration > your_service.service",
+        "echo '[Unit]\\nDescription=My Python App\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nUser=seva_romanovsky\\nWorkingDirectory=/home/seva_romanovsky/bot/Deploy_Bot\\nExecStart=/home/seva_romanovsky/env/bin/python3 /home/seva_romanovsky/bot/Deploy_Bot/deploy_bot.py\\n\\n[Install]\\nWantedBy=multi-user.target' > your_service.service",
         "sudo mv your_service.service /etc/systemd/system/",
         "sudo systemctl enable your_service",
         "sudo systemctl start your_service",
@@ -63,6 +62,7 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f'Произошла ошибка: {str(e)}')
 
     await update.message.reply_text('Деплой завершен.')
+
 
 def main():
     app = Application.builder().token(TOKEN).build()
