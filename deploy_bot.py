@@ -25,26 +25,32 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("У вас нет доступа к этой команде.")
         return
 
-    # Получаем ссылку на GitHub репозиторий
-    if len(context.args) != 1:
-        await update.message.reply_text('Пожалуйста, предоставьте ссылку на репозиторий GitHub.')
+    # Проверяем, предоставлены ли ссылка на репозиторий и имя файла
+    if len(context.args) != 2:
+        await update.message.reply_text('Используйте команду в формате: /deploy <ссылка на репозиторий> <имя исполняемого файла>')
         return
-    
+
     github_link = context.args[0]
+    exec_file = context.args[1]
+
+    # Определяем имя репозитория для создания пути и имени сервиса
+    repo_name = github_link.split('/')[-1]
+    if repo_name.endswith('.git'):
+        repo_name = repo_name[:-4]
 
     # Команды для выполнения
     commands = [
-        f"git clone {github_link}",
-        "echo '[Unit]\\nDescription=My Python App\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nUser=seva_romanovsky\\nWorkingDirectory=/home/seva_romanovsky/bot/Deploy_Bot\\nExecStart=/home/seva_romanovsky/env/bin/python3 /home/seva_romanovsky/bot/Deploy_Bot/deploy_bot.py\\n\\n[Install]\\nWantedBy=multi-user.target' > your_service.service",
-        "sudo mv your_service.service /etc/systemd/system/",
-        "sudo systemctl enable your_service",
-        "sudo systemctl start your_service",
-        "sudo systemctl status your_service"
+        f"git clone {github_link} /home/seva_romanovsky/bot/{repo_name}",  # Путь, куда клонировать репозиторий
+        f"echo '[Unit]\\nDescription=Python Application\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nUser=seva_romanovsky\\nWorkingDirectory=/home/seva_romanovsky/bot/{repo_name}\\nExecStart=/home/seva_romanovsky/env/bin/python3 /home/seva_romanovsky/bot/{repo_name}/{exec_file}\\n\\n[Install]\\nWantedBy=multi-user.target' > /home/seva_romanovsky/bot/{repo_name}/{repo_name}.service",
+        f"sudo mv /home/seva_romanovsky/bot/{repo_name}/{repo_name}.service /etc/systemd/system/",
+        f"sudo systemctl enable {repo_name}",
+        f"sudo systemctl start {repo_name}",
+        f"sudo systemctl status {repo_name}"
     ]
 
     try:
         # Переходим в директорию для клонирования проекта
-        os.chdir('./bot')
+        os.chdir('/home/seva_romanovsky/bot')
 
         # Выполняем команды
         for cmd in commands:
@@ -62,6 +68,7 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f'Произошла ошибка: {str(e)}')
 
     await update.message.reply_text('Деплой завершен.')
+
 
 
 def main():
