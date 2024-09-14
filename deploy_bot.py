@@ -50,7 +50,7 @@ async def deploy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     github_link, exec_file = context.args
     repo_name = github_link.split('/')[-1].replace('.git', '')
-    project_path = f'/home/seva_romanovsky/bot/{repo_name}'
+    project_path = f'/home/sevaed/bot/{repo_name}'
 
     save_project_path(repo_name, project_path)
 
